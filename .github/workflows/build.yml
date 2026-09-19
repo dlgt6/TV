@@ -2,19 +2,26 @@ name: Build APK
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, fongmi ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, master, fongmi ]
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
 
       - name: Remove tracked stale build artifacts
         run: |
@@ -27,11 +34,15 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' && github.ref != 'refs/heads/fongmi' }}
+
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-
 
       - name: Inject signing config
         run: |
@@ -50,15 +61,8 @@ jobs:
             sed -i 's/^storePassword=.*/storePassword=android/' local.properties
           fi
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-
-      - name: Build leanback release
-        run: ./gradlew assembleLeanbackRelease
-
-      - name: Build mobile release
-        run: ./gradlew assembleMobileRelease
+      - name: Build release APKs
+        run: ./gradlew assembleLeanbackRelease assembleMobileRelease
 
       - name: Upload leanback-arm64_v8a (电视版 64位)
         uses: actions/upload-artifact@v4
@@ -66,6 +70,8 @@ jobs:
           name: leanback-arm64_v8a
           path: app/build/outputs/apk/leanback/release/leanback-arm64_v8a.apk
           if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
 
       - name: Upload leanback-armeabi_v7a (电视版 32位)
         uses: actions/upload-artifact@v4
@@ -73,6 +79,8 @@ jobs:
           name: leanback-armeabi_v7a
           path: app/build/outputs/apk/leanback/release/leanback-armeabi_v7a.apk
           if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
 
       - name: Upload mobile-arm64_v8a (手机版 64位)
         uses: actions/upload-artifact@v4
@@ -80,6 +88,8 @@ jobs:
           name: mobile-arm64_v8a
           path: app/build/outputs/apk/mobile/release/mobile-arm64_v8a.apk
           if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
 
       - name: Upload mobile-armeabi_v7a (手机版 32位)
         uses: actions/upload-artifact@v4
@@ -87,3 +97,5 @@ jobs:
           name: mobile-armeabi_v7a
           path: app/build/outputs/apk/mobile/release/mobile-armeabi_v7a.apk
           if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
