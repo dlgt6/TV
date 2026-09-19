@@ -1,10 +1,6 @@
 name: Build APK
 
 on:
-  push:
-    branches: [ main, master, fongmi ]
-  pull_request:
-    branches: [ main, master, fongmi ]
   workflow_dispatch:
 
 permissions:
@@ -62,7 +58,9 @@ jobs:
           fi
 
       - name: Build release APKs
-        run: ./gradlew assembleLeanbackRelease assembleMobileRelease
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleLeanbackRelease assembleMobileRelease
 
       - name: Upload leanback-arm64_v8a (电视版 64位)
         uses: actions/upload-artifact@v4
